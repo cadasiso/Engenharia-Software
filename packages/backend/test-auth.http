@@ -1,0 +1,55 @@
+### Test Authentication Endpoints
+### You can use this file with REST Client extension in VS Code
+### Or use these as examples for Postman/Insomnia
+
+@baseUrl = http://localhost:5000/api
+
+### 1. Register a new user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "password123",
+  "location": "New York"
+}
+
+### 2. Login with valid credentials
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 3. Login with invalid credentials (should fail)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "wrongpassword"
+}
+
+### 4. Logout (replace TOKEN with actual token from login)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer TOKEN
+
+### 5. Password reset request
+POST {{baseUrl}}/auth/password-reset
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### 6. Password reset confirmation
+PUT {{baseUrl}}/auth/password-reset
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "newPassword": "newpassword123"
+}

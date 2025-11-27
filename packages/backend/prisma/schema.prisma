@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  name              String
+  email             String   @unique
+  passwordHash      String
+  location          String
+  biography         String?
+  profilePictureUrl String?
+  socialLinks       Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  books             Book[]
+  matchesAsUser     Match[]  @relation("UserMatches")
+  matchesAsMatched  Match[]  @relation("MatchedUserMatches")
+  chatsAsParticipant1 Chat[] @relation("Participant1")
+  chatsAsParticipant2 Chat[] @relation("Participant2")
+  messages          Message[]
+  proposals         MeetingProposal[]
+  roomMemberships   RoomMembership[]
+  roomsAsAdmin      Room[]   @relation("RoomAdmins")
+  tradesAsParticipant1 Trade[] @relation("TradeParticipant1")
+  tradesAsParticipant2 Trade[] @relation("TradeParticipant2")
+  ratingsGiven      Rating[] @relation("RatingsGiven")
+  ratingsReceived   Rating[] @relation("RatingsReceived")
+  reportsSubmitted  Report[] @relation("ReportsSubmitted")
+  reportsReceived   Report[] @relation("ReportsReceived")
+  notifications     Notification[]
+
+  @@index([location])
+  @@index([email])
+}
+
+model Book {
+  id          String   @id @default(uuid())
+  userId      String
+  isbn        String?
+  title       String
+  author      String
+  condition   String
+  description String?
+  photoUrls   String[]
+  isAvailable Boolean  @default(true)
+  listType    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isbn])
+  @@index([listType])
+}
+
+model Match {
+  id              String   @id @default(uuid())
+  userId          String
+  matchedUserId   String
+  matchType       String
+  matchingBooks   Json
+  isHidden        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation("UserMatches", fields: [userId], references: [id], onDelete: Cascade)
+  matchedUser     User     @relation("MatchedUserMatches", fields: [matchedUserId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([matchedUserId])
+  @@index([createdAt])
+}
+
+model Chat {
+  id            String   @id @default(uuid())
+  participant1Id String
+  participant2Id String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  participant1  User     @relation("Participant1", fields: [participant1Id], references: [id], onDelete: Cascade)
+  participant2  User     @relation("Participant2", fields: [participant2Id], references: [id], onDelete: Cascade)
+  messages      Message[]
+  proposals     MeetingProposal[]
+  trades        Trade[]
+
+  @@index([participant1Id])
+  @@index([participant2Id])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+}
+
+model MeetingProposal {
+  id         String   @id @default(uuid())
+  chatId     String
+  proposerId String
+  place      String
+  dateTime   DateTime
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  chat       Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  proposer   User     @relation(fields: [proposerId], references: [id], onDelete: Cascade)
+  trades     Trade[]
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  type      String
+  genre     String?
+  adminIds  String[]
+  createdAt DateTime @default(now())
+
+  memberships RoomMembership[]
+  admins      User[]   @relation("RoomAdmins")
+
+  @@index([location])
+  @@index([type])
+}
+
+model RoomMembership {
+  id       String   @id @default(uuid())
+  roomId   String
+  userId   String
+  status   String   @default("member")
+  joinedAt DateTime @default(now())
+
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@index([roomId])
+}
+
+model Trade {
+  id                 String   @id @default(uuid())
+  participant1Id     String
+  participant2Id     String
+  chatId             String
+  meetingProposalId  String?
+  proposerId         String
+  booksOffered       Json     // Books proposer is offering
+  booksRequested     Json     // Books proposer wants to receive
+  status             String   @default("pending")
+  completedAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  participant1       User     @relation("TradeParticipant1", fields: [participant1Id], references: [id], onDelete: Cascade)
+  participant2       User     @relation("TradeParticipant2", fields: [participant2Id], references: [id], onDelete: Cascade)
+  chat               Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  meetingProposal    MeetingProposal? @relation(fields: [meetingProposalId], references: [id])
+  ratings            Rating[]
+  reports            Report[]
+  bookInterests      BookInterest[]
+
+  @@index([chatId])
+  @@index([status])
+}
+
+model BookLock {
+  id                String   @id @default(uuid())
+  bookId            String
+  ownerId           String
+  lockedForUserId   String
+  chatId            String
+  tradeProposalId   String
+  durationHours     Int
+  expiresAt         DateTime
+  extensionHistory  Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([bookId])
+  @@index([ownerId])
+  @@index([lockedForUserId])
+  @@index([expiresAt])
+}
+
+model BookInterest {
+  id                String   @id @default(uuid())
+  bookId            String
+  interestedUserId  String
+  chatId            String
+  tradeId           String
+  createdAt         DateTime @default(now())
+
+  trade             Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, tradeId])
+  @@index([bookId])
+  @@index([interestedUserId])
+}
+
+model Rating {
+  id         String   @id @default(uuid())
+  tradeId    String
+  fromUserId String
+  toUserId   String
+  score      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  trade      Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  fromUser   User     @relation("RatingsGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User     @relation("RatingsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId])
+}
+
+model Report {
+  id             String   @id @default(uuid())
+  tradeId        String
+  reporterId     String
+  reportedUserId String
+  reason         String
+  details        String
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+
+  trade          Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  reporter       User     @relation("ReportsSubmitted", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser   User     @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Notification {
+  id              String   @id @default(uuid())
+  userId          String
+  type            String
+  title           String
+  message         String
+  relatedEntityId String?
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}

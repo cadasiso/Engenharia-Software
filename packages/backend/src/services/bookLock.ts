@@ -170,9 +170,6 @@ export const getUserBookLocks = async (userId: string) => {
         gt: new Date(),
       },
     },
-    include: {
-      // We'll need to add relations if we want to include book details
-    },
     orderBy: {
       expiresAt: 'asc',
     },

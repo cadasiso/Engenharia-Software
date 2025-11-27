@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { afterAll } from 'vitest';
 import dotenv from 'dotenv';
 
 dotenv.config();

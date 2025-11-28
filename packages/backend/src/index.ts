@@ -22,8 +22,8 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  process.env.FRONTEND_URL, // Vercel URL
-].filter(Boolean);
+  process.env.FRONTEND_URL || '',
+].filter((origin) => origin !== '');
 
 app.use(cors({ 
   origin: allowedOrigins,

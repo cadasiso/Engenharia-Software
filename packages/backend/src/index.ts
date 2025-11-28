@@ -22,12 +22,19 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://engenharia-software-neon.vercel.app',
   process.env.FRONTEND_URL || '',
 ].filter((origin) => origin !== '');
 
+console.log('🌐 Allowed CORS origins:', allowedOrigins);
+
 app.use(cors({ 
   origin: allowedOrigins,
-  credentials: true 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 600
 }));
 app.use(express.json());
 

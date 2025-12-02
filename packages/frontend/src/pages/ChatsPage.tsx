@@ -8,6 +8,9 @@ interface Chat {
   participant1: { id: string; name: string };
   participant2: { id: string; name: string };
   messages: Array<{ content: string; createdAt: string }>;
+  status?: string;
+  closedBy?: string;
+  closedAt?: string;
 }
 
 interface Message {
@@ -221,6 +224,26 @@ export const ChatsPage: React.FC = () => {
     }
   };
 
+  const handleCloseChat = async () => {
+    if (!selectedChat) return;
+
+    const confirmed = window.confirm(
+      'Are you sure you want to close this chat? This will end the conversation for both users.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.post(`/chats/${selectedChat.id}/close`);
+      alert('Chat closed successfully');
+      setSelectedChat(null);
+      navigate('/chats');
+      fetchChats(); // Refresh chat list
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to close chat');
+    }
+  };
+
   const getOtherParticipant = (chat: Chat) => {
     return chat.participant1.id === user?.id ? chat.participant2 : chat.participant1;
   };
@@ -320,15 +343,21 @@ export const ChatsPage: React.FC = () => {
               <div className="divide-y">
                 {chats.map((chat) => {
                   const other = getOtherParticipant(chat);
+                  const isClosed = chat.status === 'closed';
                   return (
                     <button
                       key={chat.id}
                       onClick={() => navigate(`/chats/${chat.id}`)}
                       className={`w-full p-4 text-left hover:bg-gray-50 ${
                         selectedChat?.id === chat.id ? 'bg-blue-50' : ''
-                      }`}
+                      } ${isClosed ? 'opacity-60' : ''}`}
                     >
-                      <p className="font-medium text-gray-900">{other.name}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-gray-900">{other.name}</p>
+                        {isClosed && (
+                          <span className="text-xs text-red-600 font-semibold">🔒 Closed</span>
+                        )}
+                      </div>
                       {chat.messages[0] && (
                         <p className="text-sm text-gray-500 truncate">{chat.messages[0].content}</p>
                       )}
@@ -344,24 +373,43 @@ export const ChatsPage: React.FC = () => {
                 <>
                   <div className="p-4 border-b">
                     <div className="flex justify-between items-center">
-                      <h2 className="font-semibold text-gray-900">
-                        {getOtherParticipant(selectedChat).name}
-                      </h2>
-                      <div className="flex gap-2">
-                        {showTradeButton && (
-                          <button
-                            onClick={handleProposeTrade}
-                            className="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
-                          >
-                            Propose Trade
-                          </button>
+                      <div>
+                        <h2 className="font-semibold text-gray-900">
+                          {getOtherParticipant(selectedChat).name}
+                        </h2>
+                        {selectedChat.status === 'closed' && (
+                          <p className="text-sm text-red-600 mt-1">
+                            🔒 This chat has been closed
+                            {selectedChat.closedAt && ` on ${new Date(selectedChat.closedAt).toLocaleDateString()}`}
+                          </p>
                         )}
-                        <button
-                          onClick={() => setShowProposalForm(!showProposalForm)}
-                          className="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
-                        >
-                          {showProposalForm ? 'Cancel' : 'Propose Meeting'}
-                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        {selectedChat.status !== 'closed' && (
+                          <>
+                            {showTradeButton && (
+                              <button
+                                onClick={handleProposeTrade}
+                                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                              >
+                                Propose Trade
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setShowProposalForm(!showProposalForm)}
+                              className="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+                            >
+                              {showProposalForm ? 'Cancel' : 'Propose Meeting'}
+                            </button>
+                            <button
+                              onClick={handleCloseChat}
+                              className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                              title="Close this chat"
+                            >
+                              Close Chat
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -515,23 +563,29 @@ export const ChatsPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  <form onSubmit={handleSendMessage} className="p-4 border-t">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <button
-                        type="submit"
-                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        Send
-                      </button>
+                  {selectedChat.status !== 'closed' ? (
+                    <form onSubmit={handleSendMessage} className="p-4 border-t">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Type a message..."
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="p-4 border-t bg-gray-50 text-center text-gray-500">
+                      This chat is closed. No new messages can be sent.
                     </div>
-                  </form>
+                  )}
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-gray-500">

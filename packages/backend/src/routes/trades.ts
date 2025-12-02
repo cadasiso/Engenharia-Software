@@ -229,6 +229,31 @@ router.post('/:id/confirm', authenticate, async (req: AuthRequest, res: Response
           completedAt: new Date(),
         },
       });
+
+      // Auto-close the chat when trade is completed
+      const chat = await prisma.chat.findUnique({
+        where: { id: trade.chatId },
+      });
+
+      if (chat && chat.status === 'active') {
+        await prisma.chat.update({
+          where: { id: trade.chatId },
+          data: {
+            status: 'closed',
+            closedBy: 'system',
+            closedAt: new Date(),
+          },
+        });
+
+        // Create system message
+        await prisma.message.create({
+          data: {
+            chatId: trade.chatId,
+            senderId: userId,
+            content: '✅ Trade completed! This chat has been automatically closed.',
+          },
+        });
+      }
     } else {
       // Proposer is confirming - just acknowledge
       // In a full implementation, we'd track this separately

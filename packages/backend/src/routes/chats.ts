@@ -53,10 +53,12 @@ router.get('/status/:matchedUserId', authenticate, async (req: AuthRequest, res:
 router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
   try {
     const userId = req.user!.userId;
+    const { status } = req.query; // 'active', 'closed', or undefined for all
 
     const chats = await prisma.chat.findMany({
       where: {
         OR: [{ participant1Id: userId }, { participant2Id: userId }],
+        ...(status && { status: status as string }),
       },
       include: {
         participant1: {
@@ -221,6 +223,11 @@ router.post('/:chatId/messages', authenticate, async (req: AuthRequest, res: Res
       return res.status(404).json({ error: 'Chat not found' });
     }
 
+    // Check if chat is closed
+    if (chat.status === 'closed') {
+      return res.status(403).json({ error: 'Cannot send messages to a closed chat' });
+    }
+
     const message = await prisma.message.create({
       data: {
         chatId,
@@ -244,6 +251,73 @@ router.post('/:chatId/messages', authenticate, async (req: AuthRequest, res: Res
   } catch (error) {
     console.error('Send message error:', error);
     res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Close chat
+router.post('/:chatId/close', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
+  try {
+    const userId = req.user!.userId;
+    const { chatId } = req.params;
+
+    // Verify user is participant
+    const chat = await prisma.chat.findFirst({
+      where: {
+        id: chatId,
+        OR: [{ participant1Id: userId }, { participant2Id: userId }],
+      },
+      include: {
+        participant1: { select: { id: true, name: true } },
+        participant2: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    if (chat.status === 'closed') {
+      return res.status(400).json({ error: 'Chat is already closed' });
+    }
+
+    // Close the chat
+    const updatedChat = await prisma.chat.update({
+      where: { id: chatId },
+      data: {
+        status: 'closed',
+        closedBy: userId,
+        closedAt: new Date(),
+      },
+    });
+
+    // Get the user who closed the chat
+    const closerName = chat.participant1.id === userId ? chat.participant1.name : chat.participant2.name;
+    const otherUserId = chat.participant1Id === userId ? chat.participant2Id : chat.participant1Id;
+
+    // Create system message
+    await prisma.message.create({
+      data: {
+        chatId,
+        senderId: userId,
+        content: `🔒 ${closerName} has closed this chat.`,
+      },
+    });
+
+    // Create notification for the other user
+    await prisma.notification.create({
+      data: {
+        userId: otherUserId,
+        type: 'chat_closed',
+        title: 'Chat Closed',
+        message: `${closerName} has closed your chat conversation.`,
+        relatedEntityId: chatId,
+      },
+    });
+
+    res.json(updatedChat);
+  } catch (error) {
+    console.error('Close chat error:', error);
+    res.status(500).json({ error: 'Failed to close chat' });
   }
 });
 

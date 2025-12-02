@@ -83,6 +83,9 @@ model Chat {
   id            String   @id @default(uuid())
   participant1Id String
   participant2Id String
+  status        String   @default("active") // active, closed
+  closedBy      String?
+  closedAt      DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -94,6 +97,7 @@ model Chat {
 
   @@index([participant1Id])
   @@index([participant2Id])
+  @@index([status])
 }
 
 model Message {

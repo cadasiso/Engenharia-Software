@@ -13,6 +13,7 @@
 
 
 
+
 - [ ] 2. Backend: Chat request API endpoints
   - [ ] 2.1 Create POST /api/chat-requests endpoint
     - Validate match exists and user is non-privileged
@@ -42,12 +43,18 @@
 
   - [ ] 2.4 Create POST /api/chat-requests/:id/reject endpoint
     - Verify user is recipient
+
+
+
+
     - Update request status to rejected
     - Create notification for requester
     - _Requirements: 1.5_
 
   - [ ]* 2.5 Write property test for chat request uniqueness
     - **Property 1: Chat request uniqueness**
+
+
     - **Validates: Requirements 1.6**
 
   - [ ]* 2.6 Write property test for state transitions
@@ -93,6 +100,10 @@
     - Release old locks before creating new ones
     - Swap proposer role
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+
+
+
+
 
   - [ ]* 4.3 Write property test for trade proposal validation
     - **Property 6: Trade proposal book selection**

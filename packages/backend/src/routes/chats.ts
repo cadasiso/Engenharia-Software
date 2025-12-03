@@ -5,7 +5,7 @@ import { AuthRequest, authenticate } from '../middleware/auth';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Check chat status with a user (for perfect matches)
+// Check chat status with a user
 router.get('/status/:matchedUserId', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
   try {
     const userId = req.user!.userId;
@@ -25,21 +25,49 @@ router.get('/status/:matchedUserId', authenticate, async (req: AuthRequest, res:
       return res.json({ status: 'active', chatId: existingChat.id });
     }
 
-    // Check if both have matches (for perfect matches)
+    // Check for pending chat request
+    const pendingRequest = await prisma.chatRequest.findFirst({
+      where: {
+        OR: [
+          { requesterId: userId, recipientId: matchedUserId, status: 'pending' },
+          { requesterId: matchedUserId, recipientId: userId, status: 'pending' },
+        ],
+      },
+    });
+
+    if (pendingRequest) {
+      if (pendingRequest.requesterId === userId) {
+        return res.json({ status: 'request_sent', canInitiate: false, requestId: pendingRequest.id });
+      } else {
+        return res.json({ status: 'request_received', canInitiate: true, requestId: pendingRequest.id });
+      }
+    }
+
+    // Check match type
     const userMatch = await prisma.match.findFirst({
       where: { userId, matchedUserId, isHidden: false },
     });
+
+    if (!userMatch) {
+      return res.json({ status: 'no_match', canInitiate: false });
+    }
 
     const reverseMatch = await prisma.match.findFirst({
       where: { userId: matchedUserId, matchedUserId: userId, isHidden: false },
     });
 
-    if (userMatch?.matchType === 'perfect') {
+    if (userMatch.matchType === 'perfect') {
       if (reverseMatch) {
-        return res.json({ status: 'both_ready', canInitiate: true });
+        return res.json({ status: 'both_ready', canInitiate: true, matchType: 'perfect' });
       } else {
-        return res.json({ status: 'waiting_for_other', canInitiate: false });
+        return res.json({ status: 'waiting_for_other', canInitiate: false, matchType: 'perfect' });
       }
+    } else if (userMatch.matchType === 'partial_type1') {
+      // Non-privileged - must send request
+      return res.json({ status: 'can_request', canInitiate: false, matchType: 'partial_type1' });
+    } else if (userMatch.matchType === 'partial_type2') {
+      // Privileged - can initiate directly
+      return res.json({ status: 'can_initiate', canInitiate: true, matchType: 'partial_type2' });
     }
 
     res.json({ status: 'can_initiate', canInitiate: true });
@@ -114,20 +142,6 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       },
     });
 
-    // For perfect matches, both users must have initiated chat
-    if (userMatch.matchType === 'perfect') {
-      if (!reverseMatch) {
-        return res.status(403).json({ error: 'Both users must agree to chat for perfect matches' });
-      }
-    }
-
-    // For partial matches, only the privileged side can initiate
-    // partial_type1: They have what you want (you can initiate)
-    // partial_type2: You have what they want (they must initiate)
-    if (userMatch.matchType === 'partial_type2') {
-      return res.status(403).json({ error: 'Only the user with requested books can initiate chat for partial matches' });
-    }
-
     // Check if chat already exists
     const existingChat = await prisma.chat.findFirst({
       where: {
@@ -140,6 +154,26 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
 
     if (existingChat) {
       return res.json(existingChat);
+    }
+
+    // Handle different match types
+    if (userMatch.matchType === 'perfect') {
+      // For perfect matches, both users must have initiated (mutual agreement)
+      if (!reverseMatch) {
+        return res.status(403).json({ 
+          error: 'Both users must agree to chat for perfect matches',
+          requiresRequest: true 
+        });
+      }
+    } else if (userMatch.matchType === 'partial_type1') {
+      // Non-privileged user (they have what you want) - must send request
+      return res.status(403).json({ 
+        error: 'Please send a chat request to this user',
+        requiresRequest: true 
+      });
+    } else if (userMatch.matchType === 'partial_type2') {
+      // Privileged user (you have what they want) - can initiate directly
+      // Continue to create chat
     }
 
     // Create new chat
@@ -155,6 +189,28 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
         participant2: {
           select: { id: true, name: true, email: true },
         },
+      },
+    });
+
+    // Auto-accept any pending chat requests when chat is created
+    await prisma.chatRequest.updateMany({
+      where: {
+        OR: [
+          { requesterId: userId, recipientId: matchedUserId, status: 'pending' },
+          { requesterId: matchedUserId, recipientId: userId, status: 'pending' },
+        ],
+      },
+      data: { status: 'accepted' },
+    });
+
+    // Notify the other user
+    await prisma.notification.create({
+      data: {
+        userId: matchedUserId,
+        type: 'chat_initiated',
+        title: 'New Chat',
+        message: `${chat.participant1.name} started a chat with you`,
+        relatedEntityId: chat.id,
       },
     });
 

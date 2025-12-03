@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest, authenticate } from '../middleware/auth';
 import * as bookLockService from '../services/bookLock';
+import { transferBooks, BookTransferRequest } from '../services/bookTransfer';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -398,6 +399,10 @@ router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response)
 
     const trade = await prisma.trade.findUnique({
       where: { id },
+      include: {
+        participant1: { select: { id: true, name: true } },
+        participant2: { select: { id: true, name: true } },
+      },
     });
 
     if (!trade) {
@@ -417,24 +422,47 @@ router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response)
       return res.status(400).json({ error: 'Trade is not pending' });
     }
 
-    // Update trade status to accepted
-    const updatedTrade = await prisma.trade.update({
+    // Determine proposer and recipient
+    const proposerId = trade.proposerId;
+    const recipientId = trade.participant1.id === proposerId ? trade.participant2.id : trade.participant1.id;
+
+    // Prepare book transfer request
+    const transferRequest: BookTransferRequest = {
+      tradeId: id,
+      offeredBooks: trade.booksOffered as string[],
+      requestedBooks: trade.booksRequested as string[],
+      proposerId,
+      recipientId,
+    };
+
+    // Execute book transfer
+    const transferResult = await transferBooks(transferRequest);
+
+    if (!transferResult.success) {
+      return res.status(400).json({
+        error: 'Failed to complete trade',
+        details: transferResult.error,
+      });
+    }
+
+    // TODO: Create notifications for both users when Notification model is added
+
+    // Fetch updated trade
+    const updatedTrade = await prisma.trade.findUnique({
       where: { id },
-      data: {
-        status: 'accepted',
-      },
       include: {
         participant1: { select: { id: true, name: true } },
         participant2: { select: { id: true, name: true } },
       },
     });
 
-    // Keep locks active - they'll be released when trade is completed or cancelled
-    // This prevents the books from being offered to others while trade is in progress
-
     res.json({
       trade: updatedTrade,
-      message: 'Trade accepted! Coordinate with the other party to complete the exchange.',
+      transferResult: {
+        success: transferResult.success,
+        transferredBooks: transferResult.transferredBooks,
+        auditLogIds: transferResult.auditLogIds,
+      },
     });
   } catch (error) {
     console.error('Accept trade error:', error);

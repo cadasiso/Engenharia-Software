@@ -12,7 +12,8 @@
 
 
 
-  - [ ] 1.2 Generate and run Prisma migration
+  - [x] 1.2 Generate and run Prisma migration
+
     - Generate migration file
     - Review migration SQL
     - Run migration on development database
@@ -22,15 +23,19 @@
     - **Property 11: Trade audit log creation**
     - **Validates: Requirements 6.1**
 
-- [ ] 2. Backend: Book transfer service
+- [x] 2. Backend: Book transfer service
+
+
   - [ ] 2.1 Create bookTransfer service file
     - Create services/bookTransfer.ts
     - Define interfaces for transfer requests and results
+
     - _Requirements: 3.1, 3.2, 3.3_
 
   - [ ] 2.2 Implement validateBookOwnership function
     - Verify books exist
     - Verify correct ownership
+
     - Verify books are available
     - _Requirements: 3.1, 3.2, 4.1_
 
@@ -39,6 +44,7 @@
     - Update book ownership (userId)
     - Mark books as available
     - Create audit log entries
+
     - Release book locks
     - Update trade status
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 4.1, 4.5_
@@ -61,16 +67,19 @@
     - **Property 4: Book ownership update**
     - **Validates: Requirements 3.3, 3.4, 3.5**
 
+
   - [ ]* 2.8 Write property test for book availability after trade
     - **Property 5: Book availability after trade**
     - **Validates: Requirements 3.6, 7.4**
 
 - [ ] 3. Backend: Update trade accept endpoint
-  - [ ] 3.1 Update POST /trades/:id/accept endpoint
+  - [x] 3.1 Update POST /trades/:id/accept endpoint
+
     - Import bookTransfer service
     - Call transferBooks on acceptance
     - Handle transfer errors
     - Return detailed success/error response
+
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
 
   - [ ] 3.2 Add notification creation on trade completion
@@ -80,14 +89,17 @@
 
   - [ ] 3.3 Add error notification on trade failure
     - Notify both users if transfer fails
+
     - Include error details
     - _Requirements: 4.4_
 
   - [ ]* 3.4 Write property test for lock release on completion
     - **Property 6: Lock release on trade completion**
+
     - **Validates: Requirements 3.7, 7.3**
 
-- [ ] 4. Backend: Fix counter-proposal endpoint
+- [-] 4. Backend: Fix counter-proposal endpoint
+
   - [ ] 4.1 Update POST /trades/:id/counter endpoint
     - Ensure proper book fetching logic
     - Validate book ownership for both users
@@ -98,9 +110,12 @@
     - Release old locks before creating new ones
     - Create new locks for newly requested books
     - Handle lock creation failures
+
+
     - _Requirements: 8.4, 8.5_
 
-  - [ ]* 4.3 Write property test for proposer swap
+  - [x]* 4.3 Write property test for proposer swap
+
     - **Property 9: Counter-proposal proposer swap**
     - **Validates: Requirements 8.3**
 
@@ -165,6 +180,7 @@
   - [ ] 7.1 Update TradesPage accept trade handler
     - Show loading state during transfer
     - Display success message with transferred books
+
 
     - Display error message on failure
     - Refresh trade list after completion

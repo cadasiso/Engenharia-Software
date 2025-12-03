@@ -22,11 +22,27 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
       orderBy: { createdAt: 'desc' },
     });
 
+    // Get all active book locks to mark books as unavailable
+    const activeLocks = await prisma.bookLock.findMany({
+      where: {
+        expiresAt: { gt: new Date() },
+      },
+      select: { bookId: true },
+    });
+    const lockedBookIds = new Set(activeLocks.map(lock => lock.bookId));
+
+    // Mark books as unavailable if they have active locks
+    const booksWithAvailability = books.map(book => ({
+      ...book,
+      isAvailable: book.isAvailable && !lockedBookIds.has(book.id),
+      hasActiveLock: lockedBookIds.has(book.id),
+    }));
+
     // Filter by room scope if specified
     // We store room info in description as JSON: {"roomId": "xxx", "text": "actual description"}
-    let filteredBooks = books;
+    let filteredBooks = booksWithAvailability;
     if (scope === 'global') {
-      filteredBooks = books.filter(book => {
+      filteredBooks = booksWithAvailability.filter(book => {
         try {
           const desc = JSON.parse(book.description || '{}');
           return !desc.roomId;
@@ -36,7 +52,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
       });
     } else if (scope === 'not-room' && roomId) {
       // Get books that are NOT in this specific room (for room detail page)
-      filteredBooks = books.filter(book => {
+      filteredBooks = booksWithAvailability.filter(book => {
         try {
           const desc = JSON.parse(book.description || '{}');
           return desc.roomId !== roomId;
@@ -45,7 +61,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
         }
       });
     } else if (roomId) {
-      filteredBooks = books.filter(book => {
+      filteredBooks = booksWithAvailability.filter(book => {
         try {
           const desc = JSON.parse(book.description || '{}');
           return desc.roomId === roomId;

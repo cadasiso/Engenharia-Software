@@ -47,6 +47,7 @@
 
 
 
+
     - Update request status to rejected
     - Create notification for requester
     - _Requirements: 1.5_
@@ -129,7 +130,10 @@
     - **Property 9: Loading state consistency**
     - **Validates: Requirements 6.2**
 
-- [ ] 6. Frontend: Chat request UI components
+- [-] 6. Frontend: Chat request UI components
+
+
+
   - [ ] 6.1 Create ChatRequestButton component
     - Show different states based on match type
     - Handle request creation
@@ -141,6 +145,8 @@
     - Display received requests
     - Show requester information
     - Accept/reject buttons with loading states
+
+
     - _Requirements: 1.3, 1.4, 1.5_
 
   - [ ] 6.3 Update MatchesPage to use ChatRequestButton

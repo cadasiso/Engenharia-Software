@@ -34,6 +34,7 @@
 - [x] 2. Backend: User profile and room management endpoints
 
 
+
   - [x] 2.1 Create GET /api/users/:id/summary endpoint
 
 
@@ -114,7 +115,8 @@
     - Toggle privacy button
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 2.2, 2.5_
 
-- [ ] 6. Update RoomDetailPage
+- [-] 6. Update RoomDetailPage
+
   - [ ] 6.1 Add "Leave Room" button
     - Show for non-admin members
     - Confirmation modal before leaving
@@ -127,7 +129,9 @@
     - Show count of filtered results
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-  - [ ] 6.3 Make member names clickable
+  - [x] 6.3 Make member names clickable
+
+
     - Open ProfileSummaryModal on click
     - _Requirements: 4.2_
 

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { ProfileSummaryModal } from '../components/ProfileSummaryModal';
 import { api } from '../lib/api';
 
 interface Room {
@@ -44,6 +45,7 @@ export const RoomDetailPage: React.FC = () => {
   const [myBooks, setMyBooks] = useState<Book[]>([]);
   const [roomBooks, setRoomBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const handleLogout = () => {
     logout();
@@ -228,16 +230,28 @@ export const RoomDetailPage: React.FC = () => {
               </h2>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {members.map((member) => (
-                  <div key={member.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
+                  <button
+                    key={member.id}
+                    onClick={() => setSelectedUserId(member.user.id)}
+                    className="w-full flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                  >
                     <img
                       src={getProfilePictureUrl(member)}
                       alt={member.user.name}
                       className="w-8 h-8 rounded-full object-cover"
                     />
-                    <span className="text-sm text-gray-900 truncate">{member.user.name}</span>
-                  </div>
+                    <span className="text-sm text-gray-900 truncate hover:text-blue-600">
+                      {member.user.name}
+                    </span>
+                  </button>
                 ))}
               </div>
+              
+              <ProfileSummaryModal
+                isOpen={!!selectedUserId}
+                onClose={() => setSelectedUserId(null)}
+                userId={selectedUserId}
+              />
             </div>
           </div>
 

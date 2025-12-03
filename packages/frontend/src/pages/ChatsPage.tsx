@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
 import { Modal } from '../components/Modal';
+import { TradeProposalModal } from '../components/TradeProposalModal';
 import { useModal } from '../hooks/useModal';
 
 interface Chat {
@@ -45,6 +46,10 @@ export const ChatsPage: React.FC = () => {
   const [proposalPlace, setProposalPlace] = useState('');
   const [proposalDateTime, setProposalDateTime] = useState('');
   const [showTradeButton, setShowTradeButton] = useState(false);
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [userBooks, setUserBooks] = useState<any[]>([]);
+  const [matchedUserBooks, setMatchedUserBooks] = useState<any[]>([]);
+  const [currentMatch, setCurrentMatch] = useState<any>(null);
   const { modalState, showModal, showConfirm, closeModal } = useModal();
 
   const handleLogout = () => {
@@ -86,8 +91,10 @@ export const ChatsPage: React.FC = () => {
 
     try {
       const otherUser = getOtherParticipant(selectedChat);
-      const response = await api.get('/matches');
-      const match = response.data.find(
+      
+      // Find the match
+      const matchesResponse = await api.get('/matches');
+      const match = matchesResponse.data.find(
         (m: any) => m.matchedUser.id === otherUser.id
       );
 
@@ -96,23 +103,38 @@ export const ChatsPage: React.FC = () => {
         return;
       }
 
-      const offeredBookIds = match.matchingBooks
-        .filter((b: any) => b.userBookId)
-        .map((b: any) => b.userBookId);
-      const requestedBookIds = match.matchingBooks
-        .filter((b: any) => b.matchedUserBookId)
-        .map((b: any) => b.matchedUserBookId);
+      // Fetch user's books
+      const userBooksResponse = await api.get('/books');
+      const inventoryBooks = userBooksResponse.data.filter((b: any) => b.listType === 'inventory');
 
+      // Fetch matched user's books
+      const matchedUserBooksResponse = await api.get(`/users/${otherUser.id}/books`);
+      const matchedInventoryBooks = matchedUserBooksResponse.data.filter((b: any) => b.listType === 'inventory');
+
+      setUserBooks(inventoryBooks);
+      setMatchedUserBooks(matchedInventoryBooks);
+      setCurrentMatch(match);
+      setShowTradeModal(true);
+    } catch (error) {
+      showModal('Error', 'Failed to load trade data', 'error');
+    }
+  };
+
+  const handleTradeSubmit = async (offeredBookIds: string[], requestedBookIds: string[]) => {
+    if (!currentMatch) return;
+
+    try {
       await api.post('/trades', {
-        matchId: match.id,
+        matchId: currentMatch.id,
         offeredBookIds,
         requestedBookIds,
       });
 
       showModal('Trade Proposed!', 'Check the Trades page to manage your proposal.', 'success');
+      setShowTradeModal(false);
       setTimeout(() => navigate('/trades'), 1500);
-    } catch (error) {
-      showModal('Error', 'Failed to propose trade', 'error');
+    } catch (error: any) {
+      throw error; // Let the modal handle the error
     }
   };
 
@@ -272,6 +294,14 @@ export const ChatsPage: React.FC = () => {
         title={modalState.title}
         message={modalState.message}
         type={modalState.type}
+      />
+      <TradeProposalModal
+        isOpen={showTradeModal}
+        onClose={() => setShowTradeModal(false)}
+        userBooks={userBooks}
+        matchedUserBooks={matchedUserBooks}
+        matchedUserName={selectedChat ? getOtherParticipant(selectedChat).name : ''}
+        onSubmit={handleTradeSubmit}
       />
       <div className="min-h-screen bg-gray-50">
         <nav className="bg-white shadow-sm">

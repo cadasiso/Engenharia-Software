@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
+import { SearchInput } from '../components/SearchInput';
+import { ProfileSummaryModal } from '../components/ProfileSummaryModal';
+import { LoadingButton } from '../components/LoadingButton';
+import { Modal } from '../components/Modal';
+import { useModal } from '../hooks/useModal';
 
 interface MatchingBook {
   userBookId?: string;
@@ -28,8 +33,10 @@ export const MatchesPage: React.FC = () => {
   const navigate = useNavigate();
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [chatStatuses, setChatStatuses] = useState<Record<string, any>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const { modalState, showModal, showConfirm, closeModal } = useModal();
 
   const handleLogout = () => {
     logout();
@@ -68,61 +75,31 @@ export const MatchesPage: React.FC = () => {
 
   const handleRefresh = async () => {
     try {
-      setIsRefreshing(true);
       const response = await api.post('/matches/refresh');
       setMatches(response.data.matches);
+      showModal('Success', `Found ${response.data.matches.length} matches!`, 'success');
     } catch (error) {
-      alert('Failed to refresh matches');
-    } finally {
-      setIsRefreshing(false);
+      showModal('Error', 'Failed to refresh matches', 'error');
     }
   };
 
   const handleHideMatch = async (matchId: string) => {
-    try {
-      await api.delete(`/matches/${matchId}`);
-      setMatches(matches.filter((m) => m.id !== matchId));
-    } catch (error) {
-      alert('Failed to hide match');
-    }
+    showConfirm(
+      'Hide Match',
+      'Are you sure you want to hide this match? You can refresh matches to see it again.',
+      async () => {
+        try {
+          await api.delete(`/matches/${matchId}`);
+          setMatches(matches.filter((m) => m.id !== matchId));
+          showModal('Hidden', 'Match hidden successfully', 'success');
+        } catch (error) {
+          showModal('Error', 'Failed to hide match', 'error');
+        }
+      }
+    );
   };
 
-  const handleInitiateTrade = async (match: Match) => {
-    try {
-      // Get book IDs from matching books
-      const offeredBookIds = match.matchingBooks
-        .filter((b) => b.userBookId)
-        .map((b) => b.userBookId!);
-      const requestedBookIds = match.matchingBooks
-        .filter((b) => b.matchedUserBookId)
-        .map((b) => b.matchedUserBookId!);
 
-      console.log('Trade data:', { matchId: match.id, offeredBookIds, requestedBookIds });
-
-      if (offeredBookIds.length === 0 || requestedBookIds.length === 0) {
-        alert('Cannot initiate trade: missing book information');
-        return;
-      }
-
-      const response = await api.post('/trades', {
-        matchId: match.id,
-        offeredBookIds,
-        requestedBookIds,
-      });
-
-      const lockCount = response.data.locks?.length || 0;
-      alert(`Trade proposed! ${lockCount} book(s) locked for 48 hours. Check the Trades page.`);
-      navigate('/trades');
-    } catch (error: any) {
-      console.error('Trade initiation error:', error);
-      const errorMsg = error.response?.data?.error || 'Failed to initiate trade';
-      if (error.response?.data?.lockedBookId) {
-        alert(`${errorMsg}\n\nOne of the books is already locked for another trade.`);
-      } else {
-        alert(errorMsg);
-      }
-    }
-  };
 
   const getMatchTypeLabel = (type: string) => {
     switch (type) {
@@ -137,8 +114,13 @@ export const MatchesPage: React.FC = () => {
     }
   };
 
-  const perfectMatches = matches.filter((m) => m.matchType === 'perfect');
-  const partialMatches = matches.filter((m) => m.matchType !== 'perfect');
+  // Filter matches by search query
+  const filteredMatches = matches.filter((match) =>
+    match.matchedUser.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const perfectMatches = filteredMatches.filter((m) => m.matchType === 'perfect');
+  const partialMatches = filteredMatches.filter((m) => m.matchType !== 'perfect');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -206,18 +188,26 @@ export const MatchesPage: React.FC = () => {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Matches</h1>
-            <p className="mt-2 text-gray-600">Find people to exchange books with</p>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Matches</h1>
+              <p className="mt-2 text-gray-600">Find people to exchange books with</p>
+            </div>
+            <LoadingButton
+              onClick={handleRefresh}
+              loadingText="Refreshing..."
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Refresh Matches
+            </LoadingButton>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isRefreshing ? 'Refreshing...' : 'Refresh Matches'}
-          </button>
+          <SearchInput
+            placeholder="Search matches by name..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            className="max-w-md"
+          />
         </div>
 
         {isLoading ? (
@@ -237,6 +227,10 @@ export const MatchesPage: React.FC = () => {
             >
               Manage My Books
             </Link>
+          </div>
+        ) : filteredMatches.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <p className="text-gray-500">No matches found for "{searchQuery}"</p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -271,13 +265,13 @@ export const MatchesPage: React.FC = () => {
                     return (
                       <div key={match.id} className="bg-white p-6 rounded-lg shadow-md border-2 border-green-200">
                         <div className="flex justify-between items-start mb-4">
-                          <div 
-                            className="cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
-                            onClick={() => navigate(`/users?search=${match.matchedUser.name}`)}
-                          >
-                            <h3 className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-                              {match.matchedUser.name} →
-                            </h3>
+                          <div>
+                            <button
+                              onClick={() => setSelectedUserId(match.matchedUser.id)}
+                              className="text-xl font-semibold text-gray-900 hover:text-blue-600 hover:underline text-left"
+                            >
+                              {match.matchedUser.name}
+                            </button>
                             <p className="text-gray-600 text-sm">{match.matchedUser.location}</p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${matchInfo.color}`}>
@@ -315,38 +309,31 @@ export const MatchesPage: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={async () => {
-                                if (chatStatus?.status === 'active') {
-                                  navigate(`/chats/${chatStatus.chatId}`);
-                                } else {
-                                  try {
-                                    await api.post('/chats', { matchedUserId: match.matchedUser.id });
-                                    fetchMatches(); // Refresh to update status
-                                  } catch (error: any) {
-                                    alert(error.response?.data?.error || 'Failed to start chat');
-                                  }
-                                }
-                              }}
-                              disabled={chatButtonDisabled}
-                              className={chatButtonClass}
-                            >
-                              {chatButtonText}
-                            </button>
-                            <button
-                              onClick={() => handleHideMatch(match.id)}
-                              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                            >
-                              Hide
-                            </button>
-                          </div>
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => handleInitiateTrade(match)}
-                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                            onClick={async () => {
+                              if (chatStatus?.status === 'active') {
+                                navigate(`/chats/${chatStatus.chatId}`);
+                              } else {
+                                try {
+                                  await api.post('/chats', { matchedUserId: match.matchedUser.id });
+                                  showModal('Success', 'Chat request sent!', 'success');
+                                  fetchMatches(); // Refresh to update status
+                                } catch (error: any) {
+                                  showModal('Error', error.response?.data?.error || 'Failed to start chat', 'error');
+                                }
+                              }
+                            }}
+                            disabled={chatButtonDisabled}
+                            className={chatButtonClass}
                           >
-                            Propose Trade
+                            {chatButtonText}
+                          </button>
+                          <button
+                            onClick={() => handleHideMatch(match.id)}
+                            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                          >
+                            Hide
                           </button>
                         </div>
                       </div>
@@ -368,13 +355,13 @@ export const MatchesPage: React.FC = () => {
                     return (
                       <div key={match.id} className="bg-white p-6 rounded-lg shadow">
                         <div className="flex justify-between items-start mb-4">
-                          <div 
-                            className="cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded transition-colors"
-                            onClick={() => navigate(`/users?search=${match.matchedUser.name}`)}
-                          >
-                            <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600">
-                              {match.matchedUser.name} →
-                            </h3>
+                          <div>
+                            <button
+                              onClick={() => setSelectedUserId(match.matchedUser.id)}
+                              className="text-lg font-semibold text-gray-900 hover:text-blue-600 hover:underline text-left"
+                            >
+                              {match.matchedUser.name}
+                            </button>
                             <p className="text-gray-600 text-sm">{match.matchedUser.location}</p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${matchInfo.color}`}>
@@ -389,33 +376,26 @@ export const MatchesPage: React.FC = () => {
                             </div>
                           ))}
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await api.post('/chats', { matchedUserId: match.matchedUser.id });
-                                  navigate('/chats');
-                                } catch (error: any) {
-                                  alert(error.response?.data?.error || 'Failed to start chat');
-                                }
-                              }}
-                              className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                              Start Chat
-                            </button>
-                            <button
-                              onClick={() => handleHideMatch(match.id)}
-                              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                            >
-                              Hide
-                            </button>
-                          </div>
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => handleInitiateTrade(match)}
-                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                            onClick={async () => {
+                              try {
+                                await api.post('/chats', { matchedUserId: match.matchedUser.id });
+                                showModal('Success', 'Chat request sent!', 'success');
+                                navigate('/chats');
+                              } catch (error: any) {
+                                showModal('Error', error.response?.data?.error || 'Failed to start chat', 'error');
+                              }
+                            }}
+                            className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
                           >
-                            Propose Trade
+                            Start Chat
+                          </button>
+                          <button
+                            onClick={() => handleHideMatch(match.id)}
+                            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                          >
+                            Hide
                           </button>
                         </div>
                       </div>
@@ -427,6 +407,21 @@ export const MatchesPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ProfileSummaryModal
+        isOpen={!!selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+        userId={selectedUserId || ''}
+      />
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        onConfirm={modalState.onConfirm}
+      />
     </div>
   );
 };

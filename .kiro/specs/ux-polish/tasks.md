@@ -66,37 +66,51 @@
     - **Property 3: Room exit book restoration**
     - **Validates: Requirements 3.4**
 
-- [ ] 3. Update MatchesPage
-  - [ ] 3.1 Add SearchInput for filtering matches
+- [x] 3. Update MatchesPage
+
+
+
+  - [x] 3.1 Add SearchInput for filtering matches
+
+
     - Filter by user name
     - Maintain match type grouping
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [ ] 3.2 Remove "Propose Trade" button
+
+  - [x] 3.2 Remove "Propose Trade" button
     - Only show chat initiation buttons
     - _Requirements: 7.1, 7.2_
 
-  - [ ] 3.3 Make user names clickable
+
+  - [x] 3.3 Make user names clickable
     - Open ProfileSummaryModal on click
     - _Requirements: 4.1_
 
-  - [ ] 3.4 Replace all alert() with custom modals
+  - [x] 3.4 Replace all alert() with custom modals
+
     - Use showModal for success/error
     - Use showConfirm for confirmations
     - _Requirements: 1.1, 13.1, 13.2, 13.3, 13.4, 13.5_
 
-  - [ ] 3.5 Add LoadingButton to all actions
+
+  - [x] 3.5 Add LoadingButton to all actions
     - Hide match button
     - Refresh matches button
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 13.2_
 
-- [ ] 4. Update ChatsPage
-  - [ ] 4.1 Add "Propose Trade" button to chat header
+- [x] 4. Update ChatsPage
+
+  - [x] 4.1 Add "Propose Trade" button to chat header
+
+
     - Only show when chat is active
     - Open TradeProposalModal on click
     - _Requirements: 7.4, 7.5_
 
-  - [ ] 4.2 Integrate TradeProposalModal
+
+  - [x] 4.2 Integrate TradeProposalModal
+
     - Fetch user's books and matched user's books
     - Handle submission
     - Show success/error feedback
@@ -117,19 +131,24 @@
 
 - [-] 6. Update RoomDetailPage
 
-  - [ ] 6.1 Add "Leave Room" button
+  - [x] 6.1 Add "Leave Room" button
+
+
     - Show for non-admin members
     - Confirmation modal before leaving
     - Loading state during leave
     - Success feedback after leaving
     - _Requirements: 3.1, 3.2, 3.3, 3.5_
 
-  - [ ] 6.2 Add SearchInput for members
+  - [x] 6.2 Add SearchInput for members
+
+
     - Filter members by name
     - Show count of filtered results
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
   - [x] 6.3 Make member names clickable
+
 
 
     - Open ProfileSummaryModal on click

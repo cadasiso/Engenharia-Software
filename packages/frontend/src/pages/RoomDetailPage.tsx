@@ -4,6 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ProfileSummaryModal } from '../components/ProfileSummaryModal';
+import { LoadingButton } from '../components/LoadingButton';
+import { SearchInput } from '../components/SearchInput';
+import { Modal } from '../components/Modal';
+import { useModal } from '../hooks/useModal';
 import { api } from '../lib/api';
 
 interface Room {
@@ -46,6 +50,8 @@ export const RoomDetailPage: React.FC = () => {
   const [roomBooks, setRoomBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const { modalState, showModal, showConfirm, closeModal } = useModal();
 
   const handleLogout = () => {
     logout();
@@ -148,6 +154,30 @@ export const RoomDetailPage: React.FC = () => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(member.user.name)}&size=40&background=random`;
   };
 
+  const handleLeaveRoom = async () => {
+    showConfirm(
+      'Leave Room',
+      'Are you sure you want to leave this room? Your books will be returned to your public inventory.',
+      async () => {
+        try {
+          await api.post(`/rooms/${roomId}/leave`);
+          showModal('Success', 'You have left the room', 'success');
+          setTimeout(() => navigate('/rooms'), 1500);
+        } catch (error: any) {
+          showModal('Error', error.response?.data?.error || 'Failed to leave room', 'error');
+        }
+      }
+    );
+  };
+
+  const isAdmin = room && user && room.adminIds.includes(user.id);
+  const isMember = members.some(m => m.user.id === user?.id);
+
+  // Filter members by search query
+  const filteredMembers = members.filter((member) =>
+    member.user.name.toLowerCase().includes(memberSearchQuery.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -213,12 +243,23 @@ export const RoomDetailPage: React.FC = () => {
                '🔒 Private Room'}
             </p>
           </div>
-          <button
-            onClick={() => navigate('/rooms')}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-          >
-            Back to Rooms
-          </button>
+          <div className="flex gap-2">
+            {isMember && !isAdmin && (
+              <LoadingButton
+                onClick={handleLeaveRoom}
+                loadingText="Leaving..."
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Leave Room
+              </LoadingButton>
+            )}
+            <button
+              onClick={() => navigate('/rooms')}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            >
+              Back to Rooms
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -226,25 +267,37 @@ export const RoomDetailPage: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-4">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Members ({members.length})
+                Members ({filteredMembers.length} of {members.length})
               </h2>
+              <SearchInput
+                placeholder="Search members..."
+                value={memberSearchQuery}
+                onChange={setMemberSearchQuery}
+                className="mb-4"
+              />
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {members.map((member) => (
-                  <button
-                    key={member.id}
-                    onClick={() => setSelectedUserId(member.user.id)}
-                    className="w-full flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                  >
-                    <img
-                      src={getProfilePictureUrl(member)}
-                      alt={member.user.name}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                    <span className="text-sm text-gray-900 truncate hover:text-blue-600">
-                      {member.user.name}
-                    </span>
-                  </button>
-                ))}
+                {filteredMembers.length > 0 ? (
+                  filteredMembers.map((member) => (
+                    <button
+                      key={member.id}
+                      onClick={() => setSelectedUserId(member.user.id)}
+                      className="w-full flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                    >
+                      <img
+                        src={getProfilePictureUrl(member)}
+                        alt={member.user.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <span className="text-sm text-gray-900 truncate hover:text-blue-600">
+                        {member.user.name}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No members found
+                  </p>
+                )}
               </div>
               
               <ProfileSummaryModal
@@ -319,6 +372,15 @@ export const RoomDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        onConfirm={modalState.onConfirm}
+      />
     </div>
   );
 };

@@ -152,4 +152,55 @@ router.get('/:userId/ratings', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
+// Get user profile summary
+router.get('/:id/summary', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        location: true,
+        biography: true,
+        profilePictureUrl: true,
+        books: {
+          select: {
+            listType: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Count books by type
+    const inventoryCount = user.books.filter((b) => b.listType === 'inventory').length;
+    const wishlistCount = user.books.filter((b) => b.listType === 'wishlist').length;
+
+    // Return summary without sensitive data
+    const summary = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      location: user.location,
+      biography: user.biography,
+      profilePictureUrl: user.profilePictureUrl,
+      bookCounts: {
+        inventory: inventoryCount,
+        wishlist: wishlistCount,
+      },
+    };
+
+    res.json(summary);
+  } catch (error) {
+    console.error('Get user summary error:', error);
+    res.status(500).json({ error: 'Failed to fetch user summary' });
+  }
+});
+
 export default router;

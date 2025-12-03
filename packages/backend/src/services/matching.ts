@@ -47,19 +47,33 @@ export const calculateMatches = async (userId: string) => {
     where: { userId, listType: 'wishlist' },
   });
 
-  // Get other users in the same location
+  // Get other users in the same location who have both inventory and wishlist books
   const otherUsers = await prisma.user.findMany({
     where: {
       location: user.location,
       id: { not: userId },
     },
+    include: {
+      books: {
+        select: {
+          listType: true,
+        },
+      },
+    },
+  });
+
+  // Filter users who have at least one inventory AND one wishlist book
+  const eligibleUsers = otherUsers.filter((u) => {
+    const hasInventory = u.books.some((b) => b.listType === 'inventory');
+    const hasWishlist = u.books.some((b) => b.listType === 'wishlist');
+    return hasInventory && hasWishlist;
   });
 
   // Clear existing matches for this user
   await prisma.match.deleteMany({ where: { userId } });
 
-  // Calculate matches for each other user
-  for (const otherUser of otherUsers) {
+  // Calculate matches for each eligible user
+  for (const otherUser of eligibleUsers) {
     const otherInventory = await prisma.book.findMany({
       where: { userId: otherUser.id, listType: 'inventory', isAvailable: true },
     });

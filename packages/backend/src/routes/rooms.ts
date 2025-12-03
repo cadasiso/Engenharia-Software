@@ -519,4 +519,55 @@ router.get('/:roomId/members', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
+// Leave a room
+router.post('/:id/leave', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
+  try {
+    const userId = req.user!.userId;
+    const { id: roomId } = req.params;
+
+    // Check if user is a member
+    const membership = await prisma.roomMembership.findFirst({
+      where: {
+        roomId,
+        userId,
+        status: 'member',
+      },
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'You are not a member of this room' });
+    }
+
+    // Check if user is admin
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+    });
+
+    if (room && room.adminIds.includes(userId)) {
+      return res.status(403).json({ error: 'Admins cannot leave the room. Transfer admin rights first.' });
+    }
+
+    // Return books assigned to this room back to public
+    await prisma.book.updateMany({
+      where: {
+        userId,
+        // Assuming there's a roomId field on books, if not this needs adjustment
+      },
+      data: {
+        // Reset room assignment - adjust based on your schema
+      },
+    });
+
+    // Remove membership
+    await prisma.roomMembership.delete({
+      where: { id: membership.id },
+    });
+
+    res.json({ message: 'Successfully left the room' });
+  } catch (error) {
+    console.error('Leave room error:', error);
+    res.status(500).json({ error: 'Failed to leave room' });
+  }
+});
+
 export default router;

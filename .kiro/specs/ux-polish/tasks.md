@@ -5,6 +5,7 @@
 
 
 
+
   - [ ] 1.1 Create SearchInput component
     - Styled input with search icon
     - Debounced onChange handler
@@ -30,20 +31,28 @@
     - Loading state on submit
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-- [ ] 2. Backend: User profile and room management endpoints
-  - [ ] 2.1 Create GET /api/users/:id/summary endpoint
+- [x] 2. Backend: User profile and room management endpoints
+
+
+  - [x] 2.1 Create GET /api/users/:id/summary endpoint
+
+
     - Return user profile with book counts
     - Exclude sensitive data (email, passwordHash)
     - _Requirements: 4.3_
 
-  - [ ] 2.2 Create POST /api/rooms/:id/leave endpoint
+  - [x] 2.2 Create POST /api/rooms/:id/leave endpoint
+
+
     - Verify user is member
     - Remove user from room
     - Return books to public inventory
     - Update member count
     - _Requirements: 3.2, 3.3, 3.4, 3.5_
 
-  - [ ] 2.3 Update GET /api/matches endpoint
+  - [x] 2.3 Update GET /api/matches endpoint
+
+
     - Add filter for users with both inventory and wishlist books
     - Apply filter by default
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_

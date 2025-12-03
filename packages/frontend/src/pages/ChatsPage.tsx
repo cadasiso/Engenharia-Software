@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/api';
+import { Modal } from '../components/Modal';
+import { useModal } from '../hooks/useModal';
 
 interface Chat {
   id: string;
@@ -43,6 +45,7 @@ export const ChatsPage: React.FC = () => {
   const [proposalPlace, setProposalPlace] = useState('');
   const [proposalDateTime, setProposalDateTime] = useState('');
   const [showTradeButton, setShowTradeButton] = useState(false);
+  const { modalState, showModal, showConfirm, closeModal } = useModal();
 
   const handleLogout = () => {
     logout();
@@ -89,7 +92,7 @@ export const ChatsPage: React.FC = () => {
       );
 
       if (!match) {
-        alert('No match found with this user');
+        showModal('No Match Found', 'No match found with this user', 'error');
         return;
       }
 
@@ -106,10 +109,10 @@ export const ChatsPage: React.FC = () => {
         requestedBookIds,
       });
 
-      alert('Trade proposed! Check the Trades page.');
-      navigate('/trades');
+      showModal('Trade Proposed!', 'Check the Trades page to manage your proposal.', 'success');
+      setTimeout(() => navigate('/trades'), 1500);
     } catch (error) {
-      alert('Failed to propose trade');
+      showModal('Error', 'Failed to propose trade', 'error');
     }
   };
 
@@ -157,8 +160,8 @@ export const ChatsPage: React.FC = () => {
       await api.post(`/chats/${selectedChat.id}/messages`, { content: newMessage });
       setNewMessage('');
       fetchMessages(selectedChat.id);
-    } catch (error) {
-      alert('Failed to send message');
+    } catch (error: any) {
+      showModal('Error', error.response?.data?.error || 'Failed to send message', 'error');
     }
   };
 
@@ -168,7 +171,7 @@ export const ChatsPage: React.FC = () => {
 
     // Check if there's already a pending or confirmed proposal
     if (proposals.length > 0 && proposals[0].status !== 'rejected') {
-      alert('Please reject the current proposal before creating a new one');
+      showModal('Proposal Exists', 'Please reject the current proposal before creating a new one', 'warning');
       return;
     }
 
@@ -182,22 +185,28 @@ export const ChatsPage: React.FC = () => {
       setProposalDateTime('');
       setShowProposalForm(false);
       fetchProposals(selectedChat.id);
-      alert('Meeting proposal sent!');
+      showModal('Success', 'Meeting proposal sent!', 'success');
     } catch (error) {
-      alert('Failed to create proposal');
+      showModal('Error', 'Failed to create proposal', 'error');
     }
   };
 
   const handleCancelProposal = async (proposalId: string) => {
-    try {
-      await api.post(`/proposals/${proposalId}/reject`);
-      if (selectedChat) {
-        fetchProposals(selectedChat.id);
+    showConfirm(
+      'Cancel Proposal',
+      'Are you sure you want to cancel this meeting proposal?',
+      async () => {
+        try {
+          await api.post(`/proposals/${proposalId}/reject`);
+          if (selectedChat) {
+            fetchProposals(selectedChat.id);
+          }
+          showModal('Cancelled', 'Meeting proposal cancelled', 'success');
+        } catch (error) {
+          showModal('Error', 'Failed to cancel proposal', 'error');
+        }
       }
-      alert('Meeting proposal cancelled');
-    } catch (error) {
-      alert('Failed to cancel proposal');
-    }
+    );
   };
 
   const handleAcceptProposal = async (proposalId: string) => {
@@ -206,42 +215,48 @@ export const ChatsPage: React.FC = () => {
       if (selectedChat) {
         fetchProposals(selectedChat.id);
       }
-      alert('Meeting proposal accepted!');
+      showModal('Accepted!', 'Meeting proposal accepted!', 'success');
     } catch (error) {
-      alert('Failed to accept proposal');
+      showModal('Error', 'Failed to accept proposal', 'error');
     }
   };
 
   const handleRejectProposal = async (proposalId: string) => {
-    try {
-      await api.post(`/proposals/${proposalId}/reject`);
-      if (selectedChat) {
-        fetchProposals(selectedChat.id);
+    showConfirm(
+      'Reject Proposal',
+      'Are you sure you want to reject this meeting proposal?',
+      async () => {
+        try {
+          await api.post(`/proposals/${proposalId}/reject`);
+          if (selectedChat) {
+            fetchProposals(selectedChat.id);
+          }
+          showModal('Rejected', 'Meeting proposal rejected', 'success');
+        } catch (error) {
+          showModal('Error', 'Failed to reject proposal', 'error');
+        }
       }
-      alert('Meeting proposal rejected');
-    } catch (error) {
-      alert('Failed to reject proposal');
-    }
+    );
   };
 
   const handleCloseChat = async () => {
     if (!selectedChat) return;
 
-    const confirmed = window.confirm(
-      'Are you sure you want to close this chat? This will end the conversation for both users.'
+    showConfirm(
+      'Close Chat',
+      'Are you sure you want to close this chat? This will end the conversation for both users.',
+      async () => {
+        try {
+          await api.post(`/chats/${selectedChat.id}/close`);
+          showModal('Chat Closed', 'Chat closed successfully', 'success');
+          setSelectedChat(null);
+          navigate('/chats');
+          fetchChats(); // Refresh chat list
+        } catch (error: any) {
+          showModal('Error', error.response?.data?.error || 'Failed to close chat', 'error');
+        }
+      }
     );
-
-    if (!confirmed) return;
-
-    try {
-      await api.post(`/chats/${selectedChat.id}/close`);
-      alert('Chat closed successfully');
-      setSelectedChat(null);
-      navigate('/chats');
-      fetchChats(); // Refresh chat list
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to close chat');
-    }
   };
 
   const getOtherParticipant = (chat: Chat) => {
@@ -249,8 +264,17 @@ export const ChatsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+    <>
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
@@ -597,5 +621,6 @@ export const ChatsPage: React.FC = () => {
         )}
       </div>
     </div>
+    </>
   );
 };

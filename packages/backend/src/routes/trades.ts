@@ -88,6 +88,19 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       }
     }
 
+    // Check if any offered books are already locked
+    for (const bookId of offeredBookIds) {
+      const canLock = await bookLockService.canLockBook(bookId);
+      if (!canLock) {
+        const lock = await bookLockService.getActiveLock(bookId);
+        return res.status(409).json({
+          error: 'One or more offered books are already locked for another trade',
+          lockedBookId: bookId,
+          lockExpiresAt: lock?.expiresAt,
+        });
+      }
+    }
+
     // Create trade proposal
     const trade = await prisma.trade.create({
       data: {
@@ -109,14 +122,35 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response): Promise<
       },
     });
 
-    // Create locks for requested books
+    // Create locks for BOTH offered and requested books
     const locks = [];
+    
+    // Lock requested books (owned by other user)
     for (const bookId of requestedBookIds) {
       try {
         const lock = await bookLockService.createBookLock({
           bookId,
           ownerId: otherUserId,
           lockedForUserId: userId,
+          chatId: chat.id,
+          tradeProposalId: trade.id,
+        });
+        locks.push(lock);
+      } catch (error) {
+        // If lock creation fails, clean up created locks and trade
+        await bookLockService.releaseTradeProposalLocks(trade.id);
+        await prisma.trade.delete({ where: { id: trade.id } });
+        throw error;
+      }
+    }
+
+    // Lock offered books (owned by current user)
+    for (const bookId of offeredBookIds) {
+      try {
+        const lock = await bookLockService.createBookLock({
+          bookId,
+          ownerId: userId,
+          lockedForUserId: otherUserId,
           chatId: chat.id,
           tradeProposalId: trade.id,
         });
@@ -592,6 +626,16 @@ router.post('/:id/counter', authenticate, async (req: AuthRequest, res: Response
       }
     }
 
+    // Check if new offered books can be locked
+    for (const bookId of offeredBookIds) {
+      const canLock = await bookLockService.canLockBook(bookId);
+      if (!canLock) {
+        return res.status(409).json({
+          error: 'One or more offered books are already locked',
+        });
+      }
+    }
+
     // Update trade with new books and swap proposer
     const updatedTrade = await prisma.trade.update({
       where: { id },
@@ -606,13 +650,27 @@ router.post('/:id/counter', authenticate, async (req: AuthRequest, res: Response
       },
     });
 
-    // Create new locks
+    // Create new locks for BOTH offered and requested books
     const locks = [];
+    
+    // Lock requested books (owned by other user)
     for (const bookId of requestedBookIds) {
       const lock = await bookLockService.createBookLock({
         bookId,
         ownerId: otherUserId,
         lockedForUserId: userId,
+        chatId: trade.chatId,
+        tradeProposalId: id,
+      });
+      locks.push(lock);
+    }
+
+    // Lock offered books (owned by current user)
+    for (const bookId of offeredBookIds) {
+      const lock = await bookLockService.createBookLock({
+        bookId,
+        ownerId: userId,
+        lockedForUserId: otherUserId,
         chatId: trade.chatId,
         tradeProposalId: id,
       });

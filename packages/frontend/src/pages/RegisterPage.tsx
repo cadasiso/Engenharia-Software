@@ -21,7 +21,9 @@ export const RegisterPage: React.FC = () => {
       await register(name, email, password, location);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed');
+      const errorMessage = err.response?.data?.error || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      // Don't clear the form - keep values so user can fix issues
     } finally {
       setIsLoading(false);
     }
@@ -43,8 +45,11 @@ export const RegisterPage: React.FC = () => {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-md bg-red-50 border-2 border-red-200 p-4 animate-pulse">
+              <div className="flex items-center">
+                <span className="text-red-600 mr-2">❌</span>
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
             </div>
           )}
           <div className="rounded-md shadow-sm space-y-4">

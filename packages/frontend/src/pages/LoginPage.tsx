@@ -19,7 +19,9 @@ export const LoginPage: React.FC = () => {
       await login(email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      const errorMessage = err.response?.data?.error || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
+      // Don't clear the form - keep email and password so user can fix typos
     } finally {
       setIsLoading(false);
     }
@@ -41,8 +43,11 @@ export const LoginPage: React.FC = () => {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-md bg-red-50 border-2 border-red-200 p-4 animate-pulse">
+              <div className="flex items-center">
+                <span className="text-red-600 mr-2">❌</span>
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
             </div>
           )}
           <div className="rounded-md shadow-sm -space-y-px">

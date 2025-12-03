@@ -44,6 +44,11 @@ export const TradesPage: React.FC = () => {
   });
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionDetails, setCompletionDetails] = useState<{
+    receivedBooks: Book[];
+    givenBooks: Book[];
+  } | null>(null);
   const [counterOffered, setCounterOffered] = useState<string[]>([]);
   const [counterRequested, setCounterRequested] = useState<string[]>([]);
   const [availableBooks, setAvailableBooks] = useState<Book[]>([]);
@@ -106,13 +111,28 @@ export const TradesPage: React.FC = () => {
   };
 
   const handleAcceptTrade = async (tradeId: string) => {
-    if (!confirm('Accept this trade proposal?')) return;
+    if (!confirm('Accept this trade proposal? Books will be transferred immediately.')) return;
 
     try {
-      await api.post(`/trades/${tradeId}/accept`);
-      alert('Trade accepted! Coordinate with the other party to complete the exchange.');
-      fetchTrades();
+      const response = await api.post(`/trades/${tradeId}/accept`);
+      const { trade, transferResult } = response.data;
+      
+      // Determine which books the current user received
+      const isProposerUser = trade.proposerId === user?.id;
+      const receivedBooks = isProposerUser 
+        ? transferResult.transferredBooks.toProposer 
+        : transferResult.transferredBooks.toRecipient;
+      const givenBooks = isProposerUser 
+        ? transferResult.transferredBooks.toRecipient 
+        : transferResult.transferredBooks.toProposer;
+      
+      // Show completion modal with details
+      setCompletionDetails({ receivedBooks, givenBooks });
+      setShowCompletionModal(true);
       setShowDetailsModal(false);
+      
+      // Refresh trades list
+      fetchTrades();
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to accept trade');
     }
@@ -160,8 +180,6 @@ export const TradesPage: React.FC = () => {
   const openCounterModal = async (trade: Trade) => {
     try {
       setSelectedTrade(trade);
-      setCounterOffered([]);
-      setCounterRequested([]);
       
       // Fetch the OTHER user's inventory books (not just the ones in the current trade)
       const otherUser = getOtherUser(trade);
@@ -172,6 +190,13 @@ export const TradesPage: React.FC = () => {
         offered: otherUserBooksRes.data,
         requested: [], // Not needed for counter-proposal
       });
+      
+      // Pre-populate current trade state for reference
+      // The current user is the recipient, so:
+      // - booksRequested = what the proposer wants from current user (current user should offer these)
+      // - booksOffered = what the proposer is offering to current user (current user should request these)
+      setCounterOffered(trade.booksRequested || []); // What current user will offer
+      setCounterRequested(trade.booksOffered || []); // What current user will request
       
       setShowCounterModal(true);
     } catch (error) {
@@ -528,6 +553,71 @@ export const TradesPage: React.FC = () => {
                     Cancel
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trade Completion Modal */}
+        {showCompletionModal && completionDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+              <div className="text-center mb-6">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Trade Completed! 🎉</h2>
+                <p className="text-gray-600">Books have been successfully transferred</p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Books Received */}
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <h3 className="text-lg font-semibold text-green-900 mb-3">📚 You Received:</h3>
+                  <div className="space-y-2">
+                    {completionDetails.receivedBooks.map((book) => (
+                      <div key={book.id} className="bg-white p-3 rounded border border-green-300">
+                        <p className="font-medium text-gray-900">{book.title}</p>
+                        <p className="text-sm text-gray-600">by {book.author}</p>
+                        {book.condition && <p className="text-xs text-gray-500">Condition: {book.condition}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Books Given */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-3">📤 You Gave:</h3>
+                  <div className="space-y-2">
+                    {completionDetails.givenBooks.map((book) => (
+                      <div key={book.id} className="bg-white p-3 rounded border border-blue-300">
+                        <p className="font-medium text-gray-900">{book.title}</p>
+                        <p className="text-sm text-gray-600">by {book.author}</p>
+                        {book.condition && <p className="text-xs text-gray-500">Condition: {book.condition}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCompletionModal(false);
+                    navigate('/books');
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  View My Books
+                </button>
+                <button
+                  onClick={() => setShowCompletionModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

@@ -133,7 +133,10 @@
     - Display current trade state for reference
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [ ] 6.2 Update counter-proposal book selection UI
+  - [x] 6.2 Update counter-proposal book selection UI
+
+
+
     - Show other user's books for requesting
     - Show current user's books for offering
     - Add visual distinction between offered/requested
@@ -156,10 +159,13 @@
     - **Property 1: Counter-proposal book visibility**
     - **Validates: Requirements 1.3, 1.4**
 
+
+
 - [ ] 7. Frontend: Update trade completion UI
   - [ ] 7.1 Update TradesPage accept trade handler
     - Show loading state during transfer
     - Display success message with transferred books
+
     - Display error message on failure
     - Refresh trade list after completion
     - _Requirements: 3.1, 3.2, 3.8_

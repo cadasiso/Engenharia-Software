@@ -6,6 +6,8 @@ interface Book {
   title: string;
   author: string;
   condition: string;
+  hasActiveLock?: boolean;
+  isAvailable?: boolean;
 }
 
 interface TradeProposalModalProps {
@@ -159,23 +161,38 @@ export const TradeProposalModal: React.FC<TradeProposalModalProps> = ({
                 <p className="text-gray-500 text-sm">No books available</p>
               ) : (
                 <div className="space-y-2">
-                  {matchedUserBooks.map((book) => (
-                    <button
-                      key={book.id}
-                      onClick={() => toggleRequested(book.id)}
-                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
-                        requestedBookIds.includes(book.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      <p className="font-medium text-gray-900">{book.title}</p>
-                      <p className="text-sm text-gray-600">by {book.author}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Condition: {book.condition}
-                      </p>
-                    </button>
-                  ))}
+                  {matchedUserBooks.map((book) => {
+                    const isLocked = book.hasActiveLock || !book.isAvailable;
+                    return (
+                      <button
+                        key={book.id}
+                        onClick={() => !isLocked && toggleRequested(book.id)}
+                        disabled={isLocked}
+                        className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                          isLocked
+                            ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed'
+                            : requestedBookIds.includes(book.id)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{book.title}</p>
+                            <p className="text-sm text-gray-600">by {book.author}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Condition: {book.condition}
+                            </p>
+                          </div>
+                          {isLocked && (
+                            <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                              🔒 Locked
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               <p className="text-sm text-gray-600 mt-2">

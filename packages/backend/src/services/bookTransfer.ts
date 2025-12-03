@@ -193,6 +193,31 @@ export async function transferBooks(request: BookTransferRequest): Promise<BookT
         where: { id: { in: request.requestedBooks } },
       });
 
+      // 8. Remove matching wishlist books for both users
+      // When recipient receives offered books, remove them from their wishlist
+      for (const book of offeredBooksData) {
+        await tx.book.deleteMany({
+          where: {
+            userId: request.recipientId,
+            listType: 'wishlist',
+            title: { equals: book.title, mode: 'insensitive' },
+            author: { equals: book.author, mode: 'insensitive' },
+          },
+        });
+      }
+
+      // When proposer receives requested books, remove them from their wishlist
+      for (const book of requestedBooksData) {
+        await tx.book.deleteMany({
+          where: {
+            userId: request.proposerId,
+            listType: 'wishlist',
+            title: { equals: book.title, mode: 'insensitive' },
+            author: { equals: book.author, mode: 'insensitive' },
+          },
+        });
+      }
+
       return {
         transferredToRecipient: offeredBooksData,
         transferredToProposer: requestedBooksData,

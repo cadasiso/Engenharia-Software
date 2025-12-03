@@ -38,6 +38,8 @@ model User {
   notifications     Notification[]
   chatRequestsSent     ChatRequest[] @relation("ChatRequestsSent")
   chatRequestsReceived ChatRequest[] @relation("ChatRequestsReceived")
+  auditLogsFrom     BookAuditLog[] @relation("AuditLogsFrom")
+  auditLogsTo       BookAuditLog[] @relation("AuditLogsTo")
 
   @@index([location])
   @@index([email])
@@ -285,4 +287,23 @@ model ChatRequest {
   @@unique([requesterId, recipientId])
   @@index([recipientId, status])
   @@index([requesterId, status])
+}
+
+model BookAuditLog {
+  id          String   @id @default(uuid())
+  bookId      String
+  fromUserId  String
+  toUserId    String
+  tradeId     String
+  action      String   // 'transfer', 'assign_room', 'remove_room'
+  metadata    Json?    // Additional context
+  createdAt   DateTime @default(now())
+
+  fromUser    User     @relation("AuditLogsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser      User     @relation("AuditLogsTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([tradeId])
+  @@index([fromUserId])
+  @@index([toUserId])
 }

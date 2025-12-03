@@ -74,6 +74,25 @@ router.get('/:userId', authenticate, async (req: AuthRequest, res: Response): Pr
   }
 });
 
+// Get all user's books (inventory + wishlist)
+router.get('/:userId/books', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
+  try {
+    const { userId } = req.params;
+
+    const books = await prisma.book.findMany({
+      where: {
+        userId,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(books);
+  } catch (error) {
+    console.error('Get user books error:', error);
+    res.status(500).json({ error: 'Failed to fetch books' });
+  }
+});
+
 // Get user's inventory
 router.get('/:userId/inventory', authenticate, async (req: AuthRequest, res: Response): Promise<void | Response> => {
   try {

@@ -133,8 +133,9 @@ export const TradesPage: React.FC = () => {
       setShowCompletionModal(true);
       setShowDetailsModal(false);
       
-      // Refresh trades list
+      // Refresh trades list and book list
       fetchTrades();
+      fetchAvailableBooks(); // Refresh book list to update lock status
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to accept trade');
     }
@@ -148,6 +149,7 @@ export const TradesPage: React.FC = () => {
       await api.post(`/trades/${tradeId}/reject`, { reason });
       alert('Trade rejected and book locks released');
       fetchTrades();
+      fetchAvailableBooks(); // Refresh book list to update lock status
       setShowDetailsModal(false);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to reject trade');
@@ -161,6 +163,7 @@ export const TradesPage: React.FC = () => {
       await api.delete(`/trades/${tradeId}`);
       alert('Trade cancelled');
       fetchTrades();
+      fetchAvailableBooks(); // Refresh book list to update lock status
       setShowDetailsModal(false);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to cancel trade');
@@ -223,6 +226,7 @@ export const TradesPage: React.FC = () => {
       alert('Counter-proposal sent!');
       setShowCounterModal(false);
       fetchTrades();
+      fetchAvailableBooks(); // Refresh book list to update lock status
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to create counter-proposal');
     }

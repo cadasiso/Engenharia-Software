@@ -383,12 +383,16 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Pro
       return res.status(400).json({ error: 'Cannot cancel completed trades' });
     }
 
+    // Update trade status
     await prisma.trade.update({
       where: { id },
       data: { status: 'cancelled' },
     });
 
-    res.json({ message: 'Trade cancelled successfully' });
+    // Release all locks for this trade
+    await bookLockService.releaseTradeProposalLocks(id);
+
+    res.json({ message: 'Trade cancelled successfully and book locks released' });
   } catch (error) {
     console.error('Cancel trade error:', error);
     res.status(500).json({ error: 'Failed to cancel trade' });

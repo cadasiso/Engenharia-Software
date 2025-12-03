@@ -69,8 +69,9 @@ export const calculateMatches = async (userId: string) => {
     return hasInventory && hasWishlist;
   });
 
-  // Clear existing matches for this user
+  // Clear existing matches for this user (both directions)
   await prisma.match.deleteMany({ where: { userId } });
+  await prisma.match.deleteMany({ where: { matchedUserId: userId } });
 
   // Calculate matches for each eligible user
   for (const otherUser of eligibleUsers) {
@@ -147,6 +148,7 @@ export const calculateMatches = async (userId: string) => {
 
     // Create match if there are matching books
     if (matchType && matchingBooks.length > 0) {
+      // Create match for current user
       await prisma.match.create({
         data: {
           userId,
@@ -156,6 +158,39 @@ export const calculateMatches = async (userId: string) => {
           isHidden: false,
         },
       });
+
+      // Create reciprocal match for the other user
+      // Swap the match type for reciprocal perspective
+      let reciprocalMatchType = matchType;
+      if (matchType === 'partial_type1') {
+        // Current user wants books from other user
+        // From other user's perspective: they have books current user wants
+        reciprocalMatchType = 'partial_type2';
+      } else if (matchType === 'partial_type2') {
+        // Current user has books other user wants
+        // From other user's perspective: they want books from current user
+        reciprocalMatchType = 'partial_type1';
+      }
+
+      // Check if reciprocal match already exists
+      const existingReciprocal = await prisma.match.findFirst({
+        where: {
+          userId: otherUser.id,
+          matchedUserId: userId,
+        },
+      });
+
+      if (!existingReciprocal) {
+        await prisma.match.create({
+          data: {
+            userId: otherUser.id,
+            matchedUserId: userId,
+            matchType: reciprocalMatchType,
+            matchingBooks: matchingBooks as any,
+            isHidden: false,
+          },
+        });
+      }
     }
   }
 };

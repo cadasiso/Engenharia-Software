@@ -245,20 +245,25 @@ export const MatchesPage: React.FC = () => {
                     const matchInfo = getMatchTypeLabel(match.matchType);
                     const chatStatus = chatStatuses[match.matchedUser.id];
                     
-                    let chatButtonText = 'Start Chat';
+                    let chatButtonText = 'Request Chat';
                     let chatButtonDisabled = false;
                     let chatButtonClass = 'flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700';
                     
                     if (chatStatus) {
                       if (chatStatus.status === 'active') {
                         chatButtonText = 'Open Chat';
-                      } else if (chatStatus.status === 'waiting_for_other') {
+                      } else if (chatStatus.status === 'request_sent') {
                         chatButtonText = 'Waiting for them...';
                         chatButtonDisabled = true;
                         chatButtonClass = 'flex-1 px-4 py-2 text-sm bg-gray-400 text-white rounded cursor-not-allowed';
+                      } else if (chatStatus.status === 'request_received') {
+                        chatButtonText = 'Accept Chat Request';
+                        chatButtonClass = 'flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700';
                       } else if (chatStatus.status === 'both_ready') {
-                        chatButtonText = 'They\'re ready! Start Chat';
+                        chatButtonText = 'They\'re interested! Request Chat';
                         chatButtonClass = 'flex-1 px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 animate-pulse';
+                      } else if (chatStatus.status === 'can_initiate') {
+                        chatButtonText = 'Request Chat';
                       }
                     }
                     
@@ -314,13 +319,26 @@ export const MatchesPage: React.FC = () => {
                             onClick={async () => {
                               if (chatStatus?.status === 'active') {
                                 navigate(`/chats/${chatStatus.chatId}`);
-                              } else {
+                              } else if (chatStatus?.status === 'request_received') {
+                                // Accept the chat request
                                 try {
-                                  await api.post('/chats', { matchedUserId: match.matchedUser.id });
+                                  await api.post(`/chat-requests/${chatStatus.requestId}/accept`);
+                                  showModal('Success', 'Chat request accepted!', 'success');
+                                  fetchMatches(); // Refresh to update status
+                                } catch (error: any) {
+                                  showModal('Error', error.response?.data?.error || 'Failed to accept request', 'error');
+                                }
+                              } else {
+                                // Send chat request for perfect matches
+                                try {
+                                  await api.post('/chat-requests', { 
+                                    recipientId: match.matchedUser.id,
+                                    matchId: match.id 
+                                  });
                                   showModal('Success', 'Chat request sent!', 'success');
                                   fetchMatches(); // Refresh to update status
                                 } catch (error: any) {
-                                  showModal('Error', error.response?.data?.error || 'Failed to start chat', 'error');
+                                  showModal('Error', error.response?.data?.error || 'Failed to send request', 'error');
                                 }
                               }
                             }}

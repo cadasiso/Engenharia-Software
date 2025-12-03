@@ -60,7 +60,9 @@ router.get('/status/:matchedUserId', authenticate, async (req: AuthRequest, res:
       if (reverseMatch) {
         return res.json({ status: 'both_ready', canInitiate: true, matchType: 'perfect' });
       } else {
-        return res.json({ status: 'waiting_for_other', canInitiate: false, matchType: 'perfect' });
+        // For perfect matches, allow user to initiate (send request)
+        // Don't show "waiting" until they actually click the button
+        return res.json({ status: 'can_initiate', canInitiate: true, matchType: 'perfect' });
       }
     } else if (userMatch.matchType === 'partial_type1') {
       // Non-privileged - must send request

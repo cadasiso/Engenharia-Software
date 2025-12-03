@@ -36,6 +36,8 @@ model User {
   reportsSubmitted  Report[] @relation("ReportsSubmitted")
   reportsReceived   Report[] @relation("ReportsReceived")
   notifications     Notification[]
+  chatRequestsSent     ChatRequest[] @relation("ChatRequestsSent")
+  chatRequestsReceived ChatRequest[] @relation("ChatRequestsReceived")
 
   @@index([location])
   @@index([email])
@@ -265,4 +267,22 @@ model Notification {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+}
+
+model ChatRequest {
+  id              String   @id @default(uuid())
+  requesterId     String
+  recipientId     String
+  matchId         String
+  status          String   @default("pending")
+  message         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  requester       User     @relation("ChatRequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient       User     @relation("ChatRequestsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, recipientId])
+  @@index([recipientId, status])
+  @@index([requesterId, status])
 }

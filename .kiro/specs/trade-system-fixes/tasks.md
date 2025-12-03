@@ -116,6 +116,7 @@
 
   - [x]* 4.3 Write property test for proposer swap
 
+
     - **Property 9: Counter-proposal proposer swap**
     - **Validates: Requirements 8.3**
 

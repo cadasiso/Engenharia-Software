@@ -78,7 +78,9 @@ export const TradesPage: React.FC = () => {
   const fetchAvailableBooks = async () => {
     try {
       const response = await api.get('/books');
-      const inventory = response.data.filter((b: any) => b.listType === 'inventory' && b.isAvailable);
+      // For counter-proposals, show ALL inventory books (including locked ones)
+      // Users should be able to counter-propose with their own locked books
+      const inventory = response.data.filter((b: any) => b.listType === 'inventory');
       setAvailableBooks(inventory);
     } catch (error) {
       console.error('Failed to fetch books:', error);
@@ -490,7 +492,7 @@ export const TradesPage: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Select Books to Offer</h3>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {availableBooks.map((book) => (
+                    {availableBooks.map((book: any) => (
                       <label key={book.id} className="flex items-center p-3 bg-gray-50 rounded border border-gray-200 cursor-pointer hover:bg-gray-100">
                         <input
                           type="checkbox"
@@ -504,8 +506,13 @@ export const TradesPage: React.FC = () => {
                           }}
                           className="mr-3"
                         />
-                        <div>
-                          <p className="font-medium text-gray-900">{book.title}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{book.title}</p>
+                            {book.hasActiveLock && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">🔒 In Trade</span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">by {book.author}</p>
                         </div>
                       </label>

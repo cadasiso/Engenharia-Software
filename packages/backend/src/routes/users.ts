@@ -86,7 +86,23 @@ router.get('/:userId/books', authenticate, async (req: AuthRequest, res: Respons
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(books);
+    // Get all active book locks to mark books as unavailable
+    const activeLocks = await prisma.bookLock.findMany({
+      where: {
+        expiresAt: { gt: new Date() },
+      },
+      select: { bookId: true },
+    });
+    const lockedBookIds = new Set(activeLocks.map((lock) => lock.bookId));
+
+    // Add lock information to books
+    const booksWithLockInfo = books.map((book) => ({
+      ...book,
+      hasActiveLock: lockedBookIds.has(book.id),
+      isAvailable: book.isAvailable && !lockedBookIds.has(book.id),
+    }));
+
+    res.json(booksWithLockInfo);
   } catch (error) {
     console.error('Get user books error:', error);
     res.status(500).json({ error: 'Failed to fetch books' });
@@ -106,7 +122,23 @@ router.get('/:userId/inventory', authenticate, async (req: AuthRequest, res: Res
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(books);
+    // Get all active book locks to mark books as unavailable
+    const activeLocks = await prisma.bookLock.findMany({
+      where: {
+        expiresAt: { gt: new Date() },
+      },
+      select: { bookId: true },
+    });
+    const lockedBookIds = new Set(activeLocks.map((lock) => lock.bookId));
+
+    // Add lock information to books
+    const booksWithLockInfo = books.map((book) => ({
+      ...book,
+      hasActiveLock: lockedBookIds.has(book.id),
+      isAvailable: book.isAvailable && !lockedBookIds.has(book.id),
+    }));
+
+    res.json(booksWithLockInfo);
   } catch (error) {
     console.error('Get user inventory error:', error);
     res.status(500).json({ error: 'Failed to fetch inventory' });

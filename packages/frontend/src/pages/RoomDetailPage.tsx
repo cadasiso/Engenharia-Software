@@ -93,7 +93,11 @@ export const RoomDetailPage: React.FC = () => {
       setRoom(roomRes.data);
       setMembers(membersRes.data);
       // Parse descriptions to extract text from JSON
-      setMyBooks(myBooksRes.data.map(parseBookDescription));
+      // Filter to only inventory books for room assignment
+      const inventoryBooks = myBooksRes.data
+        .filter((b: Book) => b.listType === 'inventory')
+        .map(parseBookDescription);
+      setMyBooks(inventoryBooks);
       setRoomBooks(roomBooksRes.data.map(parseBookDescription));
     } catch (error) {
       showToast('Failed to load room details', 'error');

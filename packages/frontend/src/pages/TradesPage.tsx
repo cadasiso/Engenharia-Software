@@ -157,11 +157,27 @@ export const TradesPage: React.FC = () => {
     }
   };
 
-  const openCounterModal = (trade: Trade) => {
-    setSelectedTrade(trade);
-    setCounterOffered([]);
-    setCounterRequested([]);
-    setShowCounterModal(true);
+  const openCounterModal = async (trade: Trade) => {
+    try {
+      setSelectedTrade(trade);
+      setCounterOffered([]);
+      setCounterRequested([]);
+      
+      // Fetch the OTHER user's inventory books (not just the ones in the current trade)
+      const otherUser = getOtherUser(trade);
+      const otherUserBooksRes = await api.get(`/users/${otherUser.id}/inventory`);
+      
+      // Update tradeBooks to show ALL of the other user's inventory books for requesting
+      setTradeBooks({
+        offered: otherUserBooksRes.data,
+        requested: [], // Not needed for counter-proposal
+      });
+      
+      setShowCounterModal(true);
+    } catch (error) {
+      console.error('Failed to fetch books for counter-proposal:', error);
+      alert('Failed to load books for counter-proposal');
+    }
   };
 
   const handleCounterPropose = async () => {

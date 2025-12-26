@@ -10,6 +10,7 @@ export interface AuthRequest extends Request {
   params: any;
   query: any;
   headers: any;
+  file?: any;  // Added for multer file uploads
 }
 
 export const authenticate = (

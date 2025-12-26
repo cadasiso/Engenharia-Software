@@ -25,6 +25,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://engenharia-software-neon.vercel.app',
   process.env.FRONTEND_URL || '',
+  process.env.CORS_ORIGIN || '',
 ].filter((origin) => origin !== '');
 
 console.log('🌐 Allowed CORS origins:', allowedOrigins);

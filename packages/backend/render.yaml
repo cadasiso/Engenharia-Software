@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: bookswap-backend
+    env: node
+    plan: free
+    rootDir: packages/backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bookswap-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: bookswap-redis
+          property: connectionString
+
+databases:
+  - name: bookswap-db
+    plan: free
+    databaseName: bookswap
+    user: bookswap
+
+services:
+  - type: redis
+    name: bookswap-redis
+    plan: free

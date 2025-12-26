@@ -10,7 +10,7 @@
     "postinstall": "prisma generate",
     "deploy": "prisma migrate deploy",
     "render-build": "npm install && npx prisma generate && npm run build",
-    "render-start": "npx prisma migrate deploy && npm start",
+    "render-start": "npx prisma db push && npm start",
     "lint": "eslint src --ext .ts",
     "test": "vitest --run",
     "test:watch": "vitest",

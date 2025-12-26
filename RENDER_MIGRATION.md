@@ -35,9 +35,11 @@
    - **Branch**: `main` (or your default branch)
    - **Root Directory**: `packages/backend`
    - **Build Command**: `npm install && npx prisma generate && npm run build`
-   - **Start Command**: `npx prisma migrate deploy && npm start`
+   - **Start Command**: `npx prisma db push && npm start`
 
-**Important**: Make sure to set the **Root Directory** to `packages/backend` so Render builds from the correct location.
+**Important**: 
+- Make sure to set the **Root Directory** to `packages/backend` so Render builds from the correct location
+- We use `prisma db push` instead of `migrate deploy` for initial deployment to avoid migration conflicts
 
 ## Step 4: Set Environment Variables
 In your web service settings, add these environment variables:
@@ -95,6 +97,8 @@ Update your frontend's API URL to point to your new Render service:
 - Internal URLs provide better performance and don't count against bandwidth limits
 - **TypeScript Build Issues**: If you get TypeScript errors, the build now uses a relaxed config for production
 - **Root Directory**: Ensure Root Directory is set to `packages/backend` in Render settings
+- **Migration Issues**: If you get Prisma migration errors (P3009), the deployment uses `prisma db push` to avoid migration conflicts
+- **Database Reset**: If needed, you can reset the database from Render dashboard and redeploy
 
 ## Migration Checklist
 - [ ] PostgreSQL database created

@@ -24,6 +24,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://engenharia-software-neon.vercel.app',
+  'https://bookswap-engenharia-software-neon.vercel.app',
   process.env.FRONTEND_URL || '',
   process.env.CORS_ORIGIN || '',
 ].filter((origin) => origin !== '');

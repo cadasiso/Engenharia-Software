@@ -6,10 +6,14 @@ export interface AuthRequest extends Request {
     userId: string;
     email: string;
   };
+  body: any;
+  params: any;
+  query: any;
+  headers: any;
 }
 
 export const authenticate = (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ): void | Response => {
@@ -23,7 +27,7 @@ export const authenticate = (
     const token = authHeader.substring(7);
     const payload = verifyToken(token);
 
-    (req as AuthRequest).user = payload;
+    req.user = payload;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired token' });

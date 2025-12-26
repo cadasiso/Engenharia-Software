@@ -25,6 +25,18 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://engenharia-software-neon.vercel.app',
   'https://bookswap-engenharia-software-neon.vercel.app',
+  'https://engenharia-software-git-main-cauanirmaodocaio-5436s-projects.vercel.app',
+  process.env.FRONTEND_URL || '',
+  process.env.CORS_ORIGIN || '',
+].filter((origin) => origin !== '');
+
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://engenharia-software-neon.vercel.app',
+  'https://bookswap-engenharia-software-neon.vercel.app',
+  'https://engenharia-software-git-main-cauanirmaodocaio-5436s-projects.vercel.app',
   process.env.FRONTEND_URL || '',
   process.env.CORS_ORIGIN || '',
 ].filter((origin) => origin !== '');
@@ -32,7 +44,24 @@ const allowedOrigins = [
 console.log('🌐 Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({ 
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow any Vercel preview deployment
+    if (origin.includes('vercel.app')) {
+      console.log('🔓 Allowing Vercel preview deployment:', origin);
+      return callback(null, true);
+    }
+    
+    console.log('❌ CORS blocked origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],

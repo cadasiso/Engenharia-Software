@@ -5,7 +5,7 @@ services:
     plan: free
     rootDir: packages/backend
     buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npx prisma db push && npm start
+    startCommand: node reset-db.js && npm start
     envVars:
       - key: NODE_ENV
         value: production

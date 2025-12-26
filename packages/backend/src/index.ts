@@ -30,17 +30,6 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN || '',
 ].filter((origin) => origin !== '');
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://engenharia-software-neon.vercel.app',
-  'https://bookswap-engenharia-software-neon.vercel.app',
-  'https://engenharia-software-git-main-cauanirmaodocaio-5436s-projects.vercel.app',
-  process.env.FRONTEND_URL || '',
-  process.env.CORS_ORIGIN || '',
-].filter((origin) => origin !== '');
-
 console.log('🌐 Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({ 

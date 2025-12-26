@@ -9,7 +9,7 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticate = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void | Response => {
@@ -23,7 +23,7 @@ export const authenticate = (
     const token = authHeader.substring(7);
     const payload = verifyToken(token);
 
-    req.user = payload;
+    (req as AuthRequest).user = payload;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired token' });
